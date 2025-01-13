@@ -41,12 +41,14 @@
       color: #666;
       margin: 0;
     }
-    .controls {
-      margin: 20px 0;
-      padding: 20px;
-      background:  #202020;
-      border-radius: 8px;
-    }
+.controls {
+  margin: 20px 0;
+  padding: 20px;
+  background: #202020;
+  border-radius: 8px;
+  text-align: center;
+}
+
     .preview {
       display: flex;
       gap: 20px;
@@ -57,22 +59,29 @@
       height: auto;
       border: 1px solid #ccc;
     }
-    .input-group {
-      margin: 10px 0;
-    }
+.input-group {
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#anchorHue {
+  margin-top: 10px;
+}
     label {
       display: block;
       margin-bottom: 5px;
     }
-    .drop-zone {
-      border: 2px dashed #ccc;
-      border-radius: 8px;
-      padding: 40px;
-      text-align: center;
-      background:  #202020;
-      cursor: pointer;
-      transition: border-color 0.3s ease;
-    }
+.drop-zone {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  background: #202020;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
     .drop-zone.drag-over {
       border-color: #4a90e2;
       background: #a8a8a8;
@@ -90,10 +99,12 @@
     .button:hover {
       background: #808080;
     }
-    .button-group {
-      display: flex;
-      gap: 10px;
-    }
+.button-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
    .color-preview {
       width: 50px;
       height: 50px;
@@ -105,7 +116,7 @@
     
     .hue-slider-container {
       position: relative;
-      margin: 20px 0;
+      margin: 20px;
       width: 100%;
     }
     
