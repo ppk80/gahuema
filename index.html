@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-face/1.0.3/font-face.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Averia+Sans+Libre:wght@700&display=swap');
+    
+	body{
+		background-color: #303030;
+		color: #cccac6;
+	}
+	
+	    .title-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+    .title {
+      font-family: 'Averia Sans Libre', cursive;
+      font-size: 3em;
+      margin-bottom: 5px;
+      background: linear-gradient(45deg, #ff0066, #ff9933, #33cc33, #3399ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+	
+    .subtitle {
+      font-family: 'Averia Sans Libre', cursive;
+      font-size: 1.2em;
+      color: #666;
+      margin: 0;
+    }
+    .controls {
+      margin: 20px 0;
+      padding: 20px;
+      background:  #202020;
+      border-radius: 8px;
+    }
+    .preview {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    canvas {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ccc;
+    }
+    .input-group {
+      margin: 10px 0;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .drop-zone {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      background:  #202020;
+      cursor: pointer;
+      transition: border-color 0.3s ease;
+    }
+    .drop-zone.drag-over {
+      border-color: #4a90e2;
+      background: #a8a8a8;
+    }
+    .button {
+      background: #a6a6a6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+    .button:hover {
+      background: #808080;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title-container">
+    <h1 class="title">GaHueMa</h1>
+	<h2 class="subtitle">Hue Attractor/Repulsor</h2>
+       </div> 
+    <div class="drop-zone" id="dropZone">
+      <div>Drag and drop an image here or click to select</div>
+      <input type="file" id="imageInput" accept="image/*" style="display: none;">
+    </div>
+    
+    <div class="controls">
+      <div class="input-group">
+        <label for="transformType">Transform Type:</label>
+        <select id="transformType">
+          <option value="multiply">Multiply</option>
+          <option value="add">Add</option>
+        </select>
+      </div>
+      
+      <div class="input-group">
+        <label for="anchorHue">Anchor Hue (0-360):</label>
+        <input type="number" id="anchorHue" min="0" max="360" value="180" step="1">
+      </div>
+      
+      <div class="input-group">
+        <label for="factor">Factor:</label>
+        <input type="number" id="factor" step="0.1" value="1.5">
+      </div>
+      
+      <div class="button-group">
+        <button id="processBtn" class="button">Process Image</button>
+        <button id="saveBtn" class="button">Save Image</button>
+      </div>
+    </div>
+    
+    <div class="preview">
+      <div>
+        <h3>Original</h3>
+        <canvas id="originalCanvas"></canvas>
+      </div>
+      <div>
+        <h3>Modified</h3>
+        <canvas id="modifiedCanvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const originalCanvas = document.getElementById('originalCanvas');
+    const modifiedCanvas = document.getElementById('modifiedCanvas');
+    const imageInput = document.getElementById('imageInput');
+    const dropZone = document.getElementById('dropZone');
+    const anchorHueInput = document.getElementById('anchorHue');
+    const factorInput = document.getElementById('factor');
+    const transformTypeSelect = document.getElementById('transformType');
+    const processBtn = document.getElementById('processBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    
+    let originalImageData = null;
+    
+    // Save functionality
+    saveBtn.addEventListener('click', () => {
+      if (!modifiedCanvas.width) return;
+      
+      // Create a temporary link
+      const link = document.createElement('a');
+      link.download = 'gahuma-processed.png';
+      link.href = modifiedCanvas.toDataURL('image/png');
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+    
+    // Drag and drop handlers
+    dropZone.addEventListener('click', () => imageInput.click());
+    
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('drag-over');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        handleImageFile(file);
+      }
+    });
+    
+    // Convert RGB to HSL
+    function rgbToHsl(r, g, b) {
+      r /= 255;
+      g /= 255;
+      b /= 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      
+      if (max === min) {
+        h = s = 0;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+          case r:
+            h = (g - b) / d + (g < b ? 6 : 0);
+            break;
+          case g:
+            h = (b - r) / d + 2;
+            break;
+          case b:
+            h = (r - g) / d + 4;
+            break;
+        }
+        h /= 6;
+      }
+      
+      return [h * 360, s * 100, l * 100];
+    }
+    
+    // Convert HSL to RGB
+    function hslToRgb(h, s, l) {
+      h /= 360;
+      s /= 100;
+      l /= 100;
+      
+      let r, g, b;
+      
+      if (s === 0) {
+        r = g = b = l;
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      
+      return [
+        Math.round(r * 255),
+        Math.round(g * 255),
+        Math.round(b * 255)
+      ];
+    }
+    
+    // Normalize angle to 0-360 range
+    function normalizeAngle(angle) {
+      angle = angle % 360;
+      return angle < 0 ? angle + 360 : angle;
+    }
+    
+    // Process image with hue transformation
+    function processImage() {
+      if (!originalImageData) return;
+      
+      const anchorHue = parseFloat(anchorHueInput.value);
+      const factor = parseFloat(factorInput.value);
+      const transformType = transformTypeSelect.value;
+      
+      // Draw original image data to modified canvas
+      modifiedCanvas.width = originalImageData.width;
+      modifiedCanvas.height = originalImageData.height;
+      const ctx = modifiedCanvas.getContext('2d');
+      ctx.putImageData(originalImageData, 0, 0);
+      
+      const imageData = ctx.getImageData(0, 0, modifiedCanvas.width, modifiedCanvas.height);
+      const data = imageData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        const [h, s, l] = rgbToHsl(r, g, b);
+        
+        let newHue;
+        if (transformType === 'multiply') {
+          // Multiply mode
+          const hueDiff = h - anchorHue;
+          const multipliedDiff = hueDiff * factor;
+          newHue = normalizeAngle(anchorHue + multipliedDiff);
+        } else {
+          // Add mode
+          newHue = normalizeAngle(h + factor);
+        }
+        
+        const [newR, newG, newB] = hslToRgb(newHue, s, l);
+        
+        data[i] = newR;
+        data[i + 1] = newG;
+        data[i + 2] = newB;
+      }
+      
+      ctx.putImageData(imageData, 0, 0);
+    }
+    
+    // Handle image file loading
+    function handleImageFile(file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          // Set canvas dimensions
+          originalCanvas.width = img.width;
+          originalCanvas.height = img.height;
+          modifiedCanvas.width = img.width;
+          modifiedCanvas.height = img.height;
+          
+          // Draw and store original image
+          const originalCtx = originalCanvas.getContext('2d');
+          originalCtx.drawImage(img, 0, 0);
+          originalImageData = originalCtx.getImageData(0, 0, img.width, img.height);
+          
+          // Draw initial modified image
+          const modifiedCtx = modifiedCanvas.getContext('2d');
+          modifiedCtx.drawImage(img, 0, 0);
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    // Handle file input change
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleImageFile(file);
+      }
+    });
+    
+    // Process button click handler
+    processBtn.addEventListener('click', processImage);
+  </script>
+</body>
+</html>
