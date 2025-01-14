@@ -159,7 +159,34 @@
       box-shadow: 0 0 5px rgba(0,0,0,0.5);
     }
     
-    /* The rest of your existing styles remain the same */
+    .pixel-info {
+  margin-top: 10px;
+  font-family: monospace;
+  background: #202020;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.canvas-container {
+  position: relative;
+  display: inline-block;
+}
+
+.canvas-container canvas {
+  cursor: crosshair;
+}
+
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.info-text {
+  flex-grow: 1;
+}
   </style>
 </head>
 <body>
@@ -199,17 +226,26 @@
       </div>
     </div>
     
-    <div class="preview">
-      <div>
-        <h3>Original</h3>
-        <canvas id="originalCanvas"></canvas>
-      </div>
-      <div>
-        <h3>Modified</h3>
-        <canvas id="modifiedCanvas"></canvas>
+<div class="preview">
+  <div>
+    <h3>Original</h3>
+    <div class="canvas-container">
+      <canvas id="originalCanvas"></canvas>
+      <div id="originalPixelInfo" class="pixel-info">
+        Hover to see pixel info
       </div>
     </div>
   </div>
+  <div>
+    <h3>Modified</h3>
+    <div class="canvas-container">
+      <canvas id="modifiedCanvas"></canvas>
+      <div id="modifiedPixelInfo" class="pixel-info">
+        Hover to see pixel info
+      </div>
+    </div>
+  </div>
+</div>
 
   <script>
     const originalCanvas = document.getElementById('originalCanvas');
@@ -221,6 +257,75 @@
     const transformTypeSelect = document.getElementById('transformType');
     const processBtn = document.getElementById('processBtn');
     const saveBtn = document.getElementById('saveBtn');
+	const originalPixelInfo = document.getElementById('originalPixelInfo');
+const modifiedPixelInfo = document.getElementById('modifiedPixelInfo');
+
+function getPixelInfo(canvas, x, y) {
+  const ctx = canvas.getContext('2d');
+  const pixel = ctx.getImageData(x, y, 1, 1).data;
+  const [h, s, l] = rgbToHsl(pixel[0], pixel[1], pixel[2]);
+  return {
+    hue: Math.round(h),
+    pixel: pixel,
+    x: x,
+    y: y
+  };
+}
+
+function updatePixelInfo(e, sourceCanvas, sourceInfo, targetCanvas, targetInfo) {
+  const rect = sourceCanvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) * (sourceCanvas.width / rect.width));
+  const y = Math.floor((e.clientY - rect.top) * (sourceCanvas.height / rect.height));
+  
+  if (x >= 0 && x < sourceCanvas.width && y >= 0 && y < sourceCanvas.height) {
+    const sourceCtx = sourceCanvas.getContext('2d');
+    const targetCtx = targetCanvas.getContext('2d');
+    
+    const sourcePixel = sourceCtx.getImageData(x, y, 1, 1).data;
+    const targetPixel = targetCtx.getImageData(x, y, 1, 1).data;
+    
+    const [sourceH, sourceS, sourceL] = rgbToHsl(sourcePixel[0], sourcePixel[1], sourcePixel[2]);
+    const [targetH, targetS, targetL] = rgbToHsl(targetPixel[0], targetPixel[1], targetPixel[2]);
+    
+    const hueDiff = normalizeAngle(targetH - sourceH);
+    const normalizedDiff = hueDiff > 180 ? hueDiff - 360 : hueDiff;
+    
+    sourceInfo.innerHTML = `
+      <div class="color-swatch" style="background-color: rgb(${sourcePixel[0]}, ${sourcePixel[1]}, ${sourcePixel[2]})"></div>
+      <div class="info-text">
+        Position: (${x}, ${y})<br>
+        H: ${Math.round(sourceH)}° S: ${Math.round(sourceS)}% L: ${Math.round(sourceL)}%
+      </div>
+    `;
+    
+    targetInfo.innerHTML = `
+      <div class="color-swatch" style="background-color: rgb(${targetPixel[0]}, ${targetPixel[1]}, ${targetPixel[2]})"></div>
+      <div class="info-text">
+        Position: (${x}, ${y})<br>
+        H: ${Math.round(targetH)}° S: ${Math.round(targetS)}% L: ${Math.round(targetL)}%<br>
+        Hue Difference: ${Math.round(normalizedDiff)}°
+      </div>
+    `;
+  }
+}
+
+// Add these event listeners after canvas setup
+originalCanvas.addEventListener('mousemove', (e) => {
+  updatePixelInfo(e, originalCanvas, originalPixelInfo, modifiedCanvas, modifiedPixelInfo);
+});
+
+modifiedCanvas.addEventListener('mousemove', (e) => {
+  updatePixelInfo(e, modifiedCanvas, modifiedPixelInfo, originalCanvas, originalPixelInfo);
+});
+
+// Optional: Add click handlers if you want to "freeze" the info
+originalCanvas.addEventListener('click', (e) => {
+  updatePixelInfo(e, originalCanvas, originalPixelInfo, modifiedCanvas, modifiedPixelInfo);
+});
+
+modifiedCanvas.addEventListener('click', (e) => {
+  updatePixelInfo(e, modifiedCanvas, modifiedPixelInfo, originalCanvas, originalPixelInfo);
+});
     
     let originalImageData = null;
     
