@@ -50,34 +50,52 @@ const polynomialControls = `
   </div>
 `;
 
-// Add this to your existing select options:
-document.getElementById('transformType').innerHTML += `
-  <option value="polynomial">Polynomial</option>
+const powerControls = `
+  <div class="input-group power-controls" style="display: none;">
+    <div class="formula-display">
+      newHue = initialHue + distanceToMove * hueDiff^power
+    </div>
+    <div class="input-group">
+      <label for="powerDistance">Distance to Move:</label>
+      <input type="number" id="powerDistance" step="0.1" value="1.0">
+    </div>
+    <div class="input-group">
+      <label for="powerExponent">Power:</label>
+      <input type="number" id="powerExponent" step="0.1" value="2.0">
+    </div>
+    <div class="input-group">
+      <label for="preventPowerCrossing">
+        <input type="checkbox" id="preventPowerCrossing" checked>
+        Prevent Crossing Anchor Point
+      </label>
+    </div>
+  </div>
 `;
 
-// Insert the polynomial controls after the transform type select
-document.querySelector('.controls').insertAdjacentHTML('beforeend', polynomialControls);
-
-// Show/hide polynomial controls based on transform type
+// Update the transform type change handler
 document.getElementById('transformType').addEventListener('change', (e) => {
   const polynomialControls = document.querySelector('.polynomial-controls');
-  polynomialControls.style.display = e.target.value === 'polynomial' ? 'block' : 'none';
-});
-
-// Show/hide appropriate controls based on transform type
-document.getElementById('transformType').addEventListener('change', (e) => {
-  const polynomialControls = document.querySelector('.polynomial-controls');
+  const powerControls = document.querySelector('.power-controls');
   const basicControls = document.querySelector('.basic-controls');
   
-  if (e.target.value === 'polynomial') {
-    polynomialControls.style.display = 'block';
-    basicControls.style.display = 'none';
-  } else {
-    polynomialControls.style.display = 'none';
-    basicControls.style.display = 'block';
+  // Hide all controls first
+  polynomialControls.style.display = 'none';
+  powerControls.style.display = 'none';
+  basicControls.style.display = 'none';
+  
+  // Show the appropriate controls
+  switch(e.target.value) {
+    case 'polynomial':
+      polynomialControls.style.display = 'block';
+      break;
+    case 'power':
+      powerControls.style.display = 'block';
+      break;
+    default:
+      basicControls.style.display = 'block';
+      break;
   }
 });
-
 
 function updateAnchorFromPixel(canvas, event) {
   const rect = canvas.getBoundingClientRect();
@@ -151,6 +169,10 @@ targetInfo.innerHTML = `
 `;
   }
 }
+
+
+// Insert the power controls after the transform type select
+document.querySelector('.controls').insertAdjacentHTML('beforeend', powerControls);
 
 // Add these event listeners after canvas setup
 originalCanvas.addEventListener('mousemove', (e) => {
@@ -284,6 +306,8 @@ modifiedCanvas.addEventListener('click', (e) => {
     
  // Update the processImage function to include polynomial mode
 function processImage() {
+	
+	
   if (!originalImageData) return;
   
   const anchorHue = parseFloat(anchorHueInput.value);
@@ -312,7 +336,38 @@ function processImage() {
     const [h, s, l] = rgbToHsl(r, g, b);
     
     let newHue;
-    if (transformType === 'polynomial') {
+	if (transformType === 'power') {
+      // Get power mode parameters
+      const distanceToMove = parseFloat(document.getElementById('powerDistance').value);
+      const power = parseFloat(document.getElementById('powerExponent').value);
+      const preventCrossing = document.getElementById('preventPowerCrossing').checked;
+      
+      // Calculate the shortest path difference
+      const hueDiff1 = normalizeAngle(h - anchorHue); // Going clockwise
+      const hueDiff2 = hueDiff1 > 180 ? hueDiff1 - 360 : hueDiff1; // Convert to -180 to 180 range
+      
+      // Use the smaller difference
+      const hueDiff = Math.abs(hueDiff2) < Math.abs(hueDiff1) ? hueDiff2 : hueDiff1;
+      
+      // Calculate power transformation
+      // Preserve the sign of hueDiff when applying power
+      const sign = Math.sign(hueDiff);
+      const powerTerm = sign * Math.pow(Math.abs(hueDiff), power);
+      const totalMove = distanceToMove * powerTerm;
+      
+      // Check if movement would cross anchor point
+      const wouldCross = preventCrossing && (
+        (hueDiff > 0 && totalMove < 0) || // Moving counterclockwise past anchor
+        (hueDiff < 0 && totalMove > 0) || // Moving clockwise past anchor
+        Math.abs(totalMove) > Math.abs(hueDiff) // Moving beyond anchor
+      );
+      
+      if (wouldCross) {
+        newHue = anchorHue;
+      } else {
+        newHue = normalizeAngle(h + totalMove);
+      }
+    } else if (transformType === 'polynomial') {
       // Calculate the shortest path difference
       const hueDiff1 = normalizeAngle(h - anchorHue); // Going clockwise
       const hueDiff2 = hueDiff1 > 180 ? hueDiff1 - 360 : hueDiff1; // Convert to -180 to 180 range

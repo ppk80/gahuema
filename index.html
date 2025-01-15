@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<title>GaHueMa</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-face/1.0.3/font-face.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Averia+Sans+Libre:wght@700&display=swap');
@@ -211,6 +212,20 @@
 #preventCrossing {
   margin-right: 8px;
 }
+
+.power-controls {
+  border-top: 1px solid #404040;
+  padding-top: 20px;
+  margin-top: 20px;
+}
+
+.power-controls .input-group {
+  margin: 15px 0;
+}
+
+#preventPowerCrossing {
+  margin-right: 8px;
+}
   </style>
 </head>
 <body>
@@ -228,8 +243,11 @@
       <div class="input-group">
         <label for="transformType">Transform Type:</label>
         <select id="transformType">
-          <option value="multiply">Multiply</option>
-          <option value="add">Add</option>
+		<option value="add">Add</option>
+  <option value="multiply">Multiply</option>
+  
+  <option value="power">Power</option>
+  <option value="polynomial">Polynomial</option>
         </select>
       </div>
       
@@ -264,8 +282,27 @@
         <input type="checkbox" id="preventCrossing" checked>
         Prevent Crossing Anchor Point
       </label>
+    </div></div>
+	 <div class="input-group power-controls" style="display: none;">
+    <div class="formula-display">
+      newHue = initialHue + distanceToMove * hueDiff^power
+    </div>
+    <div class="input-group">
+      <label for="powerDistance">Distance to Move:</label>
+      <input type="number" id="powerDistance" step="0.1" value="1.0">
+    </div>
+    <div class="input-group">
+      <label for="powerExponent">Power:</label>
+      <input type="number" id="powerExponent" step="0.1" value="2.0">
+    </div>
+    <div class="input-group">
+      <label for="preventPowerCrossing">
+        <input type="checkbox" id="preventPowerCrossing" checked>
+        Prevent Crossing Anchor Point
+      </label>
     </div>
   </div>
+  
       <div class="button-group">
         <button id="processBtn" class="button">Process Image</button>
         <button id="saveBtn" class="button">Save Image</button>
